@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Studio Silence & Environment Monitor</title>
+    <style>
+        /* Simple, clean styling made for a student college project */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            background-color: #ffffff;
+            border: 1px solid #dcdcdc;
+            border-top: 4px solid #2b6cb0;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: #1a365d;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .header-meta {
+            margin-top: 10px;
+            display: inline-block;
+            background: #eef2f7;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #2b6cb0;
+        }
+
+        /* Main Decision Alert Banner */
+        .status-banner {
+            padding: 22px;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid;
+            transition: all 0.3s ease;
+        }
+
+        .status-banner h2 {
+            font-size: 26px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .status-banner p {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        /* Color states for studio status */
+        .status-ok {
+            background-color: #e6f9ed;
+            border-color: #2e7d32;
+            color: #1b5e20;
+        }
+
+        .status-caution {
+            background-color: #fff9e6;
+            border-color: #f59e0b;
+            color: #b45309;
+        }
+
+        .status-noisy {
+            background-color: #fde8e8;
+            border-color: #d32f2f;
+            color: #c62828;
+        }
+
+        /* Sensor Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #dcdcdc;
+            border-radius: 6px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #666666;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 34px;
+            font-weight: bold;
+            color: #222222;
+            margin-bottom: 8px;
+        }
+
+        .card-unit {
+            font-size: 18px;
+            font-weight: normal;
+            color: #777777;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: #555555;
+            margin-top: 6px;
+        }
+
+        /* Progress Bar for Silence */
+        .progress-container {
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            height: 10px;
+            width: 80%;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 85%;
+            background-color: #2e7d32;
+            transition: width 0.4s ease, background-color 0.4s ease;
+        }
+
+        /* Section Boxes */
+        .section-box {
+            background-color: #ffffff;
+            border: 1px solid #dcdcdc;
+            border-radius: 6px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .section-box h3 {
+            font-size: 16px;
+            color: #1a365d;
+            border-bottom: 1px solid #eeeeee;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        /* History Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        table th, table td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        table th {
+            background-color: #f7fafc;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-ok {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-caution {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-noisy {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+
+        /* Footer & Connection Status */
+        .footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666666;
+            margin-top: 10px;
+            padding: 0 4px;
+        }
+
+        .pulse-dot {
+            height: 9px;
+            width: 9px;
+            background-color: #2e7d32;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <!-- Header -->
+        <header>
+            <h1>🎙️ Voice Recording Studio Environment Monitor</h1>
+            <p>Real-Time IoT Noise Level & Studio Climate Telemetry</p>
+            <div class="header-meta">
+                ESP32 IoT Project &bull; College Submission Demo
+            </div>
+        </header>
+
+        <!-- Main Studio Recording Status Banner -->
+        <div id="statusBanner" class="status-banner status-ok">
+            <h2 id="statusTitle">🎙️ OK TO RECORD &bull; STUDIO IS SILENT</h2>
+            <p id="statusAdvice">Studio is very quiet. Perfect environment for recording voiceovers and vocals.</p>
+        </div>
+
+        <!-- 3 Sensor Cards -->
+        <div class="cards-grid">
+            
+            <!-- Silence Rating Card -->
+            <div class="card">
+                <div class="card-title">Silence Rating (Mic)</div>
+                <div class="card-value" id="silenceRating">8.5 <span class="card-unit">/ 10</span></div>
+                <div class="progress-container">
+                    <div id="silenceBar" class="progress-bar" style="width: 85%;"></div>
+                </div>
+                <div class="card-desc" id="soundLevelText">Background Noise: 15.0%</div>
+            </div>
+
+            <!-- Temperature Card -->
+            <div class="card">
+                <div class="card-title">Studio Temperature</div>
+                <div class="card-value" id="tempValue">24.5 <span class="card-unit">&deg;C</span></div>
+                <div class="card-desc" id="tempDesc">Comfortable (Ideal: 20&deg;C &ndash; 25&deg;C)</div>
+            </div>
+
+            <!-- Humidity Card -->
+            <div class="card">
+                <div class="card-title">Room Humidity</div>
+                <div class="card-value" id="humValue">48.0 <span class="card-unit">%</span></div>
+                <div class="card-desc" id="humDesc">Safe for Equipment (Ideal: 40% &ndash; 60%)</div>
+            </div>
+
+        </div>
+
+
+        <!-- Recent Logs Table -->
+        <div class="section-box">
+            <h3>📋 Recent Sensor Readings (Live Log)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Silence Rating</th>
+                        <th>Noise Level</th>
+                        <th>Temperature</th>
+                        <th>Humidity</th>
+                        <th>Recording Status</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr>
+                        <td>Loading...</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td><span class="badge badge-ok">Checking</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- Footer -->
+        <div class="footer-bar">
+            <div>
+                <span class="pulse-dot"></span>
+                <span id="connStatus">Connected &bull; Polling every 2s</span>
+            </div>
+            <div>Last Updated: <span id="lastUpdated">Just now</span></div>
+        </div>
+
+    </div>
+
+    <script>
+        // Periodic Polling Function
+        async function fetchSensorData() {
+            try {
+                const response = await fetch('/api/data');
+                if (!response.ok) throw new Error("Server response error");
+                const data = await response.json();
+                updateUI(data.current);
+                updateHistory(data.history);
+                document.getElementById('connStatus').innerHTML = '<span class="pulse-dot" style="background:#2e7d32;"></span> Connected &bull; Polling every 2s';
+            } catch (err) {
+                console.error("Polling error:", err);
+                document.getElementById('connStatus').innerHTML = '<span class="pulse-dot" style="background:#d32f2f;"></span> Disconnected / Waiting for server';
+            }
+        }
+
+        // Update the Cards & Status Banner
+        function updateUI(item) {
+            if (!item) return;
+
+            // Silence Rating & Progress Bar
+            document.getElementById('silenceRating').innerHTML = `${item.silence_rating} <span class="card-unit">/ 10</span>`;
+            document.getElementById('soundLevelText').textContent = `Background Noise: ${item.sound_level}%`;
+            
+            const silencePct = Math.round(item.silence_rating * 10);
+            const silenceBar = document.getElementById('silenceBar');
+            silenceBar.style.width = silencePct + '%';
+
+            // Temperature
+            document.getElementById('tempValue').innerHTML = `${item.temperature} <span class="card-unit">&deg;C</span>`;
+            const tempDesc = document.getElementById('tempDesc');
+            if (item.temperature > 28) {
+                tempDesc.textContent = "Warm (AC recommended for equipment)";
+            } else if (item.temperature < 18) {
+                tempDesc.textContent = "Cool room";
+            } else {
+                tempDesc.textContent = "Comfortable (Ideal: 20°C - 25°C)";
+            }
+
+            // Humidity
+            document.getElementById('humValue').innerHTML = `${item.humidity} <span class="card-unit">%</span>`;
+            const humDesc = document.getElementById('humDesc');
+            if (item.humidity > 65) {
+                humDesc.textContent = "High Humidity (Dehumidifier suggested)";
+            } else {
+                humDesc.textContent = "Safe for Equipment (Ideal: 40% - 60%)";
+            }
+
+            // Status Banner Styling
+            const banner = document.getElementById('statusBanner');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusAdvice = document.getElementById('statusAdvice');
+
+            banner.className = 'status-banner'; // reset classes
+
+            if (item.status_code === 'OK') {
+                banner.classList.add('status-ok');
+                silenceBar.style.backgroundColor = '#2e7d32';
+                statusTitle.innerHTML = `🎙️ ${item.status}`;
+            } else if (item.status_code === 'CAUTION') {
+                banner.classList.add('status-caution');
+                silenceBar.style.backgroundColor = '#f59e0b';
+                statusTitle.innerHTML = `⚠️ ${item.status}`;
+            } else {
+                banner.classList.add('status-noisy');
+                silenceBar.style.backgroundColor = '#d32f2f';
+                statusTitle.innerHTML = `🚫 ${item.status}`;
+            }
+
+            statusAdvice.textContent = item.advice;
+            document.getElementById('lastUpdated').textContent = item.last_updated || new Date().toLocaleTimeString();
+        }
+
+        // Update the Live History Table
+        function updateHistory(historyList) {
+            if (!historyList || historyList.length === 0) return;
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            historyList.forEach(row => {
+                let badgeClass = 'badge-ok';
+                if (row.silence_rating < 5.0) {
+                    badgeClass = 'badge-noisy';
+                } else if (row.silence_rating < 7.5) {
+                    badgeClass = 'badge-caution';
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.time}</td>
+                    <td><strong>${row.silence_rating} / 10</strong></td>
+                    <td>${row.sound_level}%</td>
+                    <td>${row.temperature} &deg;C</td>
+                    <td>${row.humidity}%</td>
+                    <td><span class="badge ${badgeClass}">${row.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        // Run fetch immediately and then every 2 seconds
+        fetchSensorData();
+        setInterval(fetchSensorData, 2000);
+    </script>
+</body>
+</html>
